@@ -1,0 +1,11 @@
+{
+    "name": "Document Q&A Bot",
+    "description": "Ask questions about documents and get accurate answers with source citations using RAG (Retrieval-Augmented Generation).",
+    "type": "rag",
+    "tags": ["RAG", "LangChain", "Vector DB", "LLM"],
+    "welcome_message": "Hello! I'm your document assistant. Ask me anything about the knowledge base.",
+    "output": {
+        "type": "chat",
+        "show_sources": true
+    }
+}

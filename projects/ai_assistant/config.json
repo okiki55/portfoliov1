@@ -1,0 +1,15 @@
+{
+    "name": "AI Assistant",
+    "description": "A conversational AI assistant that can help with various tasks and questions.",
+    "type": "chat",
+    "tags": ["Chatbot", "LLM", "Conversational AI"],
+    "welcome_message": "Hi there! I'm your AI assistant. I can help answer questions, have conversations, and assist with various tasks. What would you like to chat about?",
+    "suggested_prompts": [
+        "Tell me a fun fact",
+        "Help me brainstorm ideas",
+        "Explain something to me"
+    ],
+    "output": {
+        "type": "chat"
+    }
+}

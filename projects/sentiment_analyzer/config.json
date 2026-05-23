@@ -1,0 +1,30 @@
+{
+  "name": "Sentiment Analyzer",
+  "description": "Analyze the sentiment of any text. This NLP model determines whether the input text expresses positive, negative, or neutral emotions.",
+  "type": "ml",
+  "tags": ["NLP", "Text Classification", "Sentiment Analysis"],
+  "inputs": [
+    {
+      "name": "text",
+      "label": "Enter Text to Analyze",
+      "type": "textarea",
+      "rows": 5,
+      "placeholder": "Enter a product review, tweet, or any text you want to analyze...",
+      "required": true
+    },
+    {
+      "name": "language",
+      "label": "Language",
+      "type": "select",
+      "options": ["English", "Spanish", "French", "German"],
+      "default": "English"
+    }
+  ],
+  "output": {
+    "type": "classification",
+    "label": "Detected Sentiment",
+    "classes": ["Positive", "Negative", "Neutral"],
+    "show_chart": true
+  },
+  "info": "<p>This sentiment analysis model uses natural language processing techniques to understand the emotional tone of text.</p><p>It's useful for analyzing customer reviews, social media posts, and any text-based feedback.</p>"
+}
