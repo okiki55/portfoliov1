@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.name }} - {{ profile.name or 'ML/AI Engineer' }}{% endblock %}
+
+{% block content %}
+<section class="project-detail-page section">
+    <div class="container">
+        <!-- Back Button -->
+        <div class="mb-4 fade-in">
+            <a href="{{ url_for('projects_list') }}" class="btn btn-outline-custom btn-sm">
+                <i class="fas fa-arrow-left me-2"></i>Back to Projects
+            </a>
+        </div>
+        
+        <!-- Project Header with ML Theme -->
+        <div class="project-header fade-in">
+            <span class="project-type-badge type-badge-ml" style="display: inline-block; margin-bottom: 1rem;">
+                <i class="fas fa-chart-line me-1"></i> Machine Learning
+            </span>
+            
+            <h1 class="mt-2">{{ project.name }}</h1>
+            <p class="lead" style="color: var(--text-secondary); max-width: 700px; margin: 0 auto;">
+                {{ project.description }}
+            </p>
+            
+            <!-- Project Tags -->
+            <div class="project-tags mt-3" style="justify-content: center; display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                {% for tag in project.tags %}
+                <span class="project-tag">{{ tag }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="row mt-5">
+            <div class="col-lg-10 mx-auto">
+                <!-- ML Prediction Form -->
+                <div class="prediction-form-card fade-in" style="border-color: #3b82f6;">
+                    <h3 class="form-title">
+                        <i class="fas fa-sliders-h" style="color: #3b82f6;"></i>
+                        Input Features
+                    </h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                        Enter the feature values below for prediction.
+                    </p>
+                    
+                    <form id="prediction-form" data-project-id="{{ project.id }}" enctype="multipart/form-data">
+                        <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+                            {% for input in project.inputs %}
+                            <div class="form-group">
+                                <label class="form-label" for="{{ input.name }}">
+                                    {{ input.label or input.name }}
+                                    {% if input.required %}<span style="color: #3b82f6;">*</span>{% endif %}
+                                </label>
+                                
+                                {% if input.type == 'number' %}
+                                <input type="number" 
+                                       class="form-control" 
+                                       id="{{ input.name }}" 
+                                       name="{{ input.name }}"
+                                       placeholder="{{ input.placeholder or 'Enter value' }}"
+                                       {% if input.min is defined %}min="{{ input.min }}"{% endif %}
+                                       {% if input.max is defined %}max="{{ input.max }}"{% endif %}
+                                       {% if input.step is defined %}step="{{ input.step }}"{% else %}step="any"{% endif %}
+                                       {% if input.default is defined %}value="{{ input.default }}"{% endif %}
+                                       {% if input.required %}required{% endif %}>
+                                
+                                {% elif input.type == 'select' %}
+                                <select class="form-control form-select" 
+                                        id="{{ input.name }}" 
+                                        name="{{ input.name }}"
+                                        {% if input.required %}required{% endif %}>
+                                    <option value="" disabled {% if not input.default %}selected{% endif %}>
+                                        {{ input.placeholder or 'Select option' }}
+                                    </option>
+                                    {% for option in input.options %}
+                                    <option value="{{ option.value if option.value is defined else option }}"
+                                            {% if input.default == (option.value if option.value is defined else option) %}selected{% endif %}>
+                                        {{ option.label if option.label is defined else option }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                
+                                {% elif input.type == 'checkbox' %}
+                                <div class="form-check">
+                                    <input type="checkbox" 
+                                           class="form-check-input" 
+                                           id="{{ input.name }}" 
+                                           name="{{ input.name }}"
+                                           {% if input.default %}checked{% endif %}>
+                                    <label class="form-check-label" for="{{ input.name }}">
+                                        {{ input.checkbox_label or 'Yes' }}
+                                    </label>
+                                </div>
+                                
+                                {% elif input.type == 'range' %}
+                                <div style="display: flex; align-items: center; gap: 1rem;">
+                                    <input type="range" 
+                                           class="form-range flex-grow-1" 
+                                           id="{{ input.name }}" 
+                                           name="{{ input.name }}"
+                                           min="{{ input.min or 0 }}"
+                                           max="{{ input.max or 100 }}"
+                                           step="{{ input.step or 1 }}"
+                                           value="{{ input.default or input.min or 0 }}">
+                                    <span class="range-value" id="{{ input.name }}-value">
+                                        {{ input.default or input.min or 0 }}
+                                    </span>
+                                </div>
+                                
+                                {% elif input.type == 'radio' %}
+                                <div class="radio-group">
+                                    {% for option in input.options %}
+                                    <div class="form-check">
+                                        <input type="radio" 
+                                               class="form-check-input" 
+                                               id="{{ input.name }}_{{ loop.index }}" 
+                                               name="{{ input.name }}"
+                                               value="{{ option.value if option.value is defined else option }}"
+                                               {% if input.default == (option.value if option.value is defined else option) %}checked{% endif %}>
+                                        <label class="form-check-label" for="{{ input.name }}_{{ loop.index }}">
+                                            {{ option.label if option.label is defined else option }}
+                                        </label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                
+                                {% else %}
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="{{ input.name }}" 
+                                       name="{{ input.name }}"
+                                       placeholder="{{ input.placeholder or '' }}"
+                                       {% if input.default is defined %}value="{{ input.default }}"{% endif %}
+                                       {% if input.required %}required{% endif %}>
+                                {% endif %}
+                                
+                                {% if input.hint %}
+                                <small class="form-text text-muted">{{ input.hint }}</small>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="text-center mt-4">
+                            <button type="submit" class="predict-btn" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8);">
+                                <span class="btn-text">
+                                    <i class="fas fa-calculator me-2"></i>Predict
+                                </span>
+                                <span class="spinner"></span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Error Display -->
+                <div id="error-display" class="error-message" style="display: none;"></div>
+                
+                <!-- Results Section -->
+                <div id="results-section" class="results-section">
+                    <div class="result-card" style="border-color: #3b82f6;">
+                        <h4 class="result-title">
+                            <i class="fas fa-chart-bar" style="color: #3b82f6;"></i>
+                            Prediction Result
+                        </h4>
+                        
+                        <div id="result-value" class="result-value" style="color: #3b82f6;">-</div>
+                        
+                        {% if project.output and project.output.label %}
+                        <p class="text-center" style="color: var(--text-secondary);">
+                            {{ project.output.label }}
+                        </p>
+                        {% endif %}
+                        
+                        <div id="confidence-display" class="result-detail-item" style="display: none; max-width: 200px; margin: 1rem auto;"></div>
+                        <div id="result-details" class="result-details"></div>
+                        
+                        {% if project.output and project.output.show_chart %}
+                        <div id="chart-container" class="chart-container" style="display: none;">
+                            <div class="chart-wrapper">
+                                <canvas id="result-chart"></canvas>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+window.projectOutput = {{ project.output | tojson | safe if project.output else '{}' }};
+</script>
+{% endblock %}

@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.name }} - {{ profile.name or 'ML/AI Engineer' }}{% endblock %}
+
+{% block content %}
+<section class="project-detail-page section">
+    <div class="container">
+        <!-- Back Button -->
+        <div class="mb-4 fade-in">
+            <a href="{{ url_for('projects_list') }}" class="btn btn-outline-custom btn-sm">
+                <i class="fas fa-arrow-left me-2"></i>Back to Projects
+            </a>
+        </div>
+        
+        <!-- Project Header with RAG Theme -->
+        <div class="project-header fade-in">
+            <span class="project-type-badge type-badge-rag" style="display: inline-block; margin-bottom: 1rem;">
+                <i class="fas fa-database me-1"></i> RAG System
+            </span>
+            
+            <h1 class="mt-2">{{ project.name }}</h1>
+            <p class="lead" style="color: var(--text-secondary); max-width: 700px; margin: 0 auto;">
+                {{ project.description }}
+            </p>
+            
+            <div class="project-tags mt-3" style="justify-content: center; display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                {% for tag in project.tags %}
+                <span class="project-tag">{{ tag }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- RAG Info Section -->
+        <div class="row mt-5">
+            <div class="col-lg-8 mx-auto">
+                <div class="prediction-form-card fade-in" style="border-color: #f59e0b; text-align: center;">
+                    <div style="font-size: 4rem; color: #f59e0b; margin-bottom: 1.5rem;">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <h3 style="color: var(--text-primary);">Chat with the Knowledge Base</h3>
+                    <p style="color: var(--text-secondary); max-width: 500px; margin: 1rem auto;">
+                        This RAG (Retrieval-Augmented Generation) system uses a knowledge base to provide accurate, context-aware responses. Click the chat button in the bottom right corner to start asking questions.
+                    </p>
+                    
+                    <div class="mt-4" style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                        <div style="padding: 1rem 1.5rem; background: var(--bg-tertiary); border-radius: var(--border-radius); display: flex; align-items: center; gap: 0.75rem;">
+                            <i class="fas fa-book" style="color: #f59e0b;"></i>
+                            <span style="color: var(--text-secondary);">Knowledge-backed answers</span>
+                        </div>
+                        <div style="padding: 1rem 1.5rem; background: var(--bg-tertiary); border-radius: var(--border-radius); display: flex; align-items: center; gap: 0.75rem;">
+                            <i class="fas fa-link" style="color: #f59e0b;"></i>
+                            <span style="color: var(--text-secondary);">Source citations</span>
+                        </div>
+                        <div style="padding: 1rem 1.5rem; background: var(--bg-tertiary); border-radius: var(--border-radius); display: flex; align-items: center; gap: 0.75rem;">
+                            <i class="fas fa-bolt" style="color: #f59e0b;"></i>
+                            <span style="color: var(--text-secondary);">Fast retrieval</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <button type="button" class="predict-btn" style="background: linear-gradient(135deg, #f59e0b, #d97706);" onclick="document.getElementById('chat-toggle').click();">
+                            <i class="fas fa-comments me-2"></i>Start Chatting
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- How it works -->
+                <div class="prediction-form-card mt-4 fade-in" style="border-color: rgba(245, 158, 11, 0.3);">
+                    <h4 class="form-title">
+                        <i class="fas fa-info-circle" style="color: #f59e0b;"></i>
+                        How RAG Works
+                    </h4>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+                        <div style="text-align: center;">
+                            <div style="width: 50px; height: 50px; margin: 0 auto 1rem; background: linear-gradient(135deg, #f59e0b, #d97706); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                <span style="color: var(--bg-primary); font-weight: 700;">1</span>
+                            </div>
+                            <h5 style="color: var(--text-primary);">Question</h5>
+                            <p style="color: var(--text-secondary); font-size: 0.9rem;">You ask a question in natural language</p>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="width: 50px; height: 50px; margin: 0 auto 1rem; background: linear-gradient(135deg, #f59e0b, #d97706); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                <span style="color: var(--bg-primary); font-weight: 700;">2</span>
+                            </div>
+                            <h5 style="color: var(--text-primary);">Retrieve</h5>
+                            <p style="color: var(--text-secondary); font-size: 0.9rem;">System searches relevant documents</p>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="width: 50px; height: 50px; margin: 0 auto 1rem; background: linear-gradient(135deg, #f59e0b, #d97706); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                <span style="color: var(--bg-primary); font-weight: 700;">3</span>
+                            </div>
+                            <h5 style="color: var(--text-primary);">Generate</h5>
+                            <p style="color: var(--text-secondary); font-size: 0.9rem;">AI generates accurate response</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Floating Chat Widget -->
+<div id="rag-chat-widget" class="rag-chat-widget">
+    <!-- Toggle Button -->
+    <button id="chat-toggle" class="chat-toggle-btn" title="Open Chat">
+        <i class="fas fa-comment-dots"></i>
+    </button>
+    
+    <!-- Chat Window -->
+    <div class="chat-window">
+        <div class="chat-header">
+            <div class="chat-header-info">
+                <div class="chat-header-avatar">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div>
+                    <div class="chat-header-title">{{ project.name }}</div>
+                    <div class="chat-header-status">
+                        <i class="fas fa-circle" style="font-size: 0.5rem;"></i> Online
+                    </div>
+                </div>
+            </div>
+            <button id="chat-close" class="chat-close-btn">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div id="chat-messages" class="chat-messages">
+            <!-- Welcome message -->
+            <div class="chat-message chat-message-bot">
+                <div class="chat-message-content">
+                    Hello! I'm your RAG assistant. Ask me anything about the knowledge base, and I'll provide accurate answers with sources.
+                </div>
+            </div>
+        </div>
+        
+        <div class="chat-input-area">
+            <form id="rag-chat-form" class="chat-input-form" data-project-id="{{ project.id }}">
+                <input type="text" 
+                       id="chat-input" 
+                       class="chat-input" 
+                       placeholder="Ask a question..."
+                       autocomplete="off"
+                       required>
+                <button type="submit" class="chat-send-btn">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+window.projectOutput = {{ project.output | tojson | safe if project.output else '{}' }};
+</script>
+{% endblock %}

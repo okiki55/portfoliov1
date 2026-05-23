@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.name }} - {{ profile.name or 'ML/AI Engineer' }}{% endblock %}
+
+{% block content %}
+<section class="project-detail-page section">
+    <div class="container">
+        <!-- Back Button -->
+        <div class="mb-4 fade-in">
+            <a href="{{ url_for('projects_list') }}" class="btn btn-outline-custom btn-sm">
+                <i class="fas fa-arrow-left me-2"></i>Back to Projects
+            </a>
+        </div>
+        
+        <!-- Project Header with NLP Theme -->
+        <div class="project-header fade-in">
+            <span class="project-type-badge type-badge-nlp" style="display: inline-block; margin-bottom: 1rem;">
+                <i class="fas fa-language me-1"></i> Natural Language Processing
+            </span>
+            
+            <h1 class="mt-2">{{ project.name }}</h1>
+            <p class="lead" style="color: var(--text-secondary); max-width: 700px; margin: 0 auto;">
+                {{ project.description }}
+            </p>
+            
+            <div class="project-tags mt-3" style="justify-content: center; display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                {% for tag in project.tags %}
+                <span class="project-tag">{{ tag }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="row mt-5">
+            <div class="col-lg-8 mx-auto">
+                <form id="prediction-form" data-project-id="{{ project.id }}">
+                    <!-- NLP Text Input -->
+                    <div class="prediction-form-card fade-in" style="border-color: #22c55e;">
+                        <h3 class="form-title">
+                            <i class="fas fa-pen-fancy" style="color: #22c55e;"></i>
+                            Enter Your Text
+                        </h3>
+                        
+                        {% for input in project.inputs %}
+                        {% if input.type == 'textarea' or input.name == 'text' %}
+                        <div class="form-group">
+                            <textarea class="form-control nlp-text-area" 
+                                      id="{{ input.name }}" 
+                                      name="{{ input.name }}"
+                                      placeholder="{{ input.placeholder or 'Type or paste your text here for analysis...' }}"
+                                      rows="6"
+                                      {% if input.required %}required{% endif %}>{{ input.default or '' }}</textarea>
+                            <div class="d-flex justify-content-between mt-2">
+                                <small style="color: var(--text-muted);">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    {{ input.hint or 'Enter any text to analyze' }}
+                                </small>
+                                <small style="color: var(--text-muted);">
+                                    <span id="char-count">0</span> characters
+                                </small>
+                            </div>
+                        </div>
+                        {% elif input.type == 'select' %}
+                        <div class="form-group mt-3">
+                            <label class="form-label" for="{{ input.name }}">{{ input.label }}</label>
+                            <select class="form-control form-select" id="{{ input.name }}" name="{{ input.name }}">
+                                {% for option in input.options %}
+                                <option value="{{ option.value if option.value is defined else option }}">
+                                    {{ option.label if option.label is defined else option }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                        
+                        <div class="text-center mt-4">
+                            <button type="submit" class="predict-btn" style="background: linear-gradient(135deg, #22c55e, #16a34a);">
+                                <span class="btn-text">
+                                    <i class="fas fa-search me-2"></i>Analyze Text
+                                </span>
+                                <span class="spinner"></span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+                
+                <!-- Error Display -->
+                <div id="error-display" class="error-message" style="display: none;"></div>
+                
+                <!-- NLP Results Section -->
+                <div id="results-section" class="results-section">
+                    <div class="nlp-result-card" style="border-color: #22c55e;">
+                        <h4 class="result-title">
+                            <i class="fas fa-magic" style="color: #22c55e;"></i>
+                            Analysis Result
+                        </h4>
+                        
+                        <!-- Sentiment Display (if applicable) -->
+                        <div id="sentiment-display" class="nlp-sentiment-display" style="display: none;">
+                            <i id="sentiment-icon" class="nlp-sentiment-icon fas fa-meh"></i>
+                            <div id="result-value" class="result-value" style="font-size: 2rem; color: #22c55e;">-</div>
+                        </div>
+                        
+                        <!-- Generic Result -->
+                        <div id="generic-result" style="display: none;">
+                            <div id="result-value-generic" class="result-value" style="color: #22c55e;">-</div>
+                        </div>
+                        
+                        <div id="confidence-display" class="result-detail-item" style="display: none; max-width: 200px; margin: 1rem auto;"></div>
+                        
+                        <!-- Entity Tags (for NER) -->
+                        <div id="entity-tags" class="nlp-entity-tags" style="display: none;"></div>
+                        
+                        <div id="result-details" class="result-details"></div>
+                        
+                        {% if project.output and project.output.show_chart %}
+                        <div id="chart-container" class="chart-container" style="display: none;">
+                            <div class="chart-wrapper">
+                                <canvas id="result-chart"></canvas>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+window.projectOutput = {{ project.output | tojson | safe if project.output else '{}' }};
+
+// Character count
+document.addEventListener('DOMContentLoaded', function() {
+    const textArea = document.querySelector('.nlp-text-area');
+    const charCount = document.getElementById('char-count');
+    
+    if (textArea && charCount) {
+        textArea.addEventListener('input', () => {
+            charCount.textContent = textArea.value.length;
+        });
+    }
+});
+
+// NLP-specific result display
+const originalDisplayResults = window.displayResults;
+window.displayResults = function(result) {
+    const sentimentDisplay = document.getElementById('sentiment-display');
+    const sentimentIcon = document.getElementById('sentiment-icon');
+    const genericResult = document.getElementById('generic-result');
+    const entityTags = document.getElementById('entity-tags');
+    
+    // Check if it's a sentiment result
+    if (result.sentiment !== undefined || (result.result && typeof result.result === 'string' && 
+        ['positive', 'negative', 'neutral'].includes(result.result.toLowerCase()))) {
+        
+        const sentiment = (result.sentiment || result.result).toLowerCase();
+        sentimentDisplay.style.display = 'block';
+        genericResult.style.display = 'none';
+        
+        // Update icon based on sentiment
+        sentimentIcon.className = 'nlp-sentiment-icon fas';
+        if (sentiment === 'positive' || sentiment.includes('positive')) {
+            sentimentIcon.classList.add('fa-smile', 'positive');
+        } else if (sentiment === 'negative' || sentiment.includes('negative')) {
+            sentimentIcon.classList.add('fa-frown', 'negative');
+        } else {
+            sentimentIcon.classList.add('fa-meh', 'neutral');
+        }
+    } else {
+        sentimentDisplay.style.display = 'none';
+        genericResult.style.display = 'block';
+    }
+    
+    // Handle entities (NER)
+    if (result.entities && Array.isArray(result.entities)) {
+        entityTags.style.display = 'flex';
+        entityTags.innerHTML = result.entities.map(e => {
+            const type = (e.type || 'other').toLowerCase();
+            return `<span class="nlp-entity-tag ${type}">${e.text} <small>(${type})</small></span>`;
+        }).join('');
+    }
+    
+    // Call original
+    if (originalDisplayResults) originalDisplayResults(result);
+};
+</script>
+{% endblock %}

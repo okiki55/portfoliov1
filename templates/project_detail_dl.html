@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.name }} - {{ profile.name or 'ML/AI Engineer' }}{% endblock %}
+
+{% block content %}
+<section class="project-detail-page section">
+    <div class="container">
+        <!-- Back Button -->
+        <div class="mb-4 fade-in">
+            <a href="{{ url_for('projects_list') }}" class="btn btn-outline-custom btn-sm">
+                <i class="fas fa-arrow-left me-2"></i>Back to Projects
+            </a>
+        </div>
+        
+        <!-- Project Header with DL Theme -->
+        <div class="project-header fade-in">
+            <span class="project-type-badge type-badge-dl" style="display: inline-block; margin-bottom: 1rem;">
+                <i class="fas fa-brain me-1"></i> Deep Learning
+            </span>
+            
+            <h1 class="mt-2">{{ project.name }}</h1>
+            <p class="lead" style="color: var(--text-secondary); max-width: 700px; margin: 0 auto;">
+                {{ project.description }}
+            </p>
+            
+            <div class="project-tags mt-3" style="justify-content: center; display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                {% for tag in project.tags %}
+                <span class="project-tag">{{ tag }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="row mt-5">
+            <div class="col-lg-10 mx-auto">
+                <form id="prediction-form" data-project-id="{{ project.id }}" enctype="multipart/form-data">
+                    <!-- Image Upload Zone -->
+                    <div class="dl-upload-zone fade-in" id="upload-zone">
+                        <input type="file" 
+                               id="image" 
+                               name="image"
+                               accept="image/*"
+                               style="display: none;"
+                               required>
+                        
+                        <div class="upload-content" id="upload-content">
+                            <i class="fas fa-cloud-upload-alt dl-upload-icon"></i>
+                            <div class="dl-upload-text">
+                                <h4>Drop your image here</h4>
+                                <p>or click to browse files</p>
+                                <small style="color: var(--text-muted);">
+                                    Supports: JPG, PNG, WebP (Max 16MB)
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <img id="preview-image" class="dl-preview-image" style="display: none;" alt="Preview">
+                    </div>
+                    
+                    {% if project.inputs|length > 1 %}
+                    <!-- Additional Inputs (if any) -->
+                    <div class="prediction-form-card mt-4 fade-in" style="border-color: #8b5cf6;">
+                        <h4 class="form-title">
+                            <i class="fas fa-cog" style="color: #8b5cf6;"></i>
+                            Additional Settings
+                        </h4>
+                        <div class="form-grid">
+                            {% for input in project.inputs %}
+                            {% if input.type != 'image' %}
+                            <div class="form-group">
+                                <label class="form-label" for="{{ input.name }}">{{ input.label or input.name }}</label>
+                                {% if input.type == 'select' %}
+                                <select class="form-control form-select" id="{{ input.name }}" name="{{ input.name }}">
+                                    {% for option in input.options %}
+                                    <option value="{{ option.value if option.value is defined else option }}">
+                                        {{ option.label if option.label is defined else option }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                {% elif input.type == 'number' %}
+                                <input type="number" class="form-control" id="{{ input.name }}" name="{{ input.name }}"
+                                       {% if input.default is defined %}value="{{ input.default }}"{% endif %}>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="text-center mt-4">
+                        <button type="submit" class="predict-btn" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9);">
+                            <span class="btn-text">
+                                <i class="fas fa-eye me-2"></i>Classify Image
+                            </span>
+                            <span class="spinner"></span>
+                        </button>
+                    </div>
+                </form>
+                
+                <!-- Error Display -->
+                <div id="error-display" class="error-message" style="display: none;"></div>
+                
+                <!-- DL Results Section -->
+                <div id="results-section" class="results-section">
+                    <div class="dl-result-container">
+                        <!-- Classification Result -->
+                        <div class="dl-classification-result" style="border-color: #8b5cf6;">
+                            <h4 class="result-title" style="justify-content: center;">
+                                <i class="fas fa-tag" style="color: #8b5cf6;"></i>
+                                Classification
+                            </h4>
+                            
+                            <div id="result-value" class="dl-class-name" style="color: #8b5cf6;">-</div>
+                            
+                            <div id="confidence-display" style="display: none;">
+                                <div class="dl-confidence-bar">
+                                    <div class="dl-confidence-fill" id="confidence-fill" style="width: 0%;"></div>
+                                </div>
+                                <p class="text-center" style="color: var(--text-secondary); font-size: 0.9rem;">
+                                    Confidence: <span id="confidence-value">0%</span>
+                                </p>
+                            </div>
+                            
+                            <div id="result-details" class="result-details mt-3"></div>
+                        </div>
+                        
+                        <!-- Chart -->
+                        {% if project.output and project.output.show_chart %}
+                        <div id="chart-container" class="chart-container" style="display: none; margin-top: 0;">
+                            <h5 style="color: var(--text-primary); margin-bottom: 1rem;">
+                                <i class="fas fa-chart-pie" style="color: #8b5cf6;"></i>
+                                Probability Distribution
+                            </h5>
+                            <div class="chart-wrapper">
+                                <canvas id="result-chart"></canvas>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+window.projectOutput = {{ project.output | tojson | safe if project.output else '{}' }};
+
+// DL-specific image upload handling
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadZone = document.getElementById('upload-zone');
+    const fileInput = document.getElementById('image');
+    const previewImage = document.getElementById('preview-image');
+    const uploadContent = document.getElementById('upload-content');
+    
+    if (!uploadZone || !fileInput) return;
+    
+    uploadZone.addEventListener('click', () => fileInput.click());
+    
+    uploadZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadZone.classList.add('dragover');
+    });
+    
+    uploadZone.addEventListener('dragleave', () => {
+        uploadZone.classList.remove('dragover');
+    });
+    
+    uploadZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length > 0) {
+            fileInput.files = e.dataTransfer.files;
+            showPreview(e.dataTransfer.files[0]);
+        }
+    });
+    
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            showPreview(e.target.files[0]);
+        }
+    });
+    
+    function showPreview(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            previewImage.src = e.target.result;
+            previewImage.style.display = 'block';
+            uploadContent.style.display = 'none';
+            uploadZone.classList.add('has-image');
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Override displayResults for DL
+const originalDisplayResults = window.displayResults || function() {};
+window.displayResults = function(result) {
+    const confidenceDisplay = document.getElementById('confidence-display');
+    const confidenceFill = document.getElementById('confidence-fill');
+    const confidenceValue = document.getElementById('confidence-value');
+    
+    if (result.confidence !== undefined && confidenceDisplay) {
+        const percent = (result.confidence * 100).toFixed(1);
+        confidenceDisplay.style.display = 'block';
+        confidenceFill.style.width = percent + '%';
+        confidenceValue.textContent = percent + '%';
+    }
+    
+    // Call the original or basic display
+    if (typeof displayResults === 'function' && displayResults !== window.displayResults) {
+        displayResults(result);
+    }
+};
+</script>
+{% endblock %}

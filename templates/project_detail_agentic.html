@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.name }} - {{ profile.name or 'ML/AI Engineer' }}{% endblock %}
+
+{% block content %}
+<section class="project-detail-page section">
+    <div class="container">
+        <!-- Back Button -->
+        <div class="mb-4 fade-in">
+            <a href="{{ url_for('projects_list') }}" class="btn btn-outline-custom btn-sm">
+                <i class="fas fa-arrow-left me-2"></i>Back to Projects
+            </a>
+        </div>
+        
+        <!-- Project Header with Agentic Theme -->
+        <div class="project-header fade-in">
+            <span class="project-type-badge type-badge-agentic" style="display: inline-block; margin-bottom: 1rem;">
+                <i class="fas fa-cogs me-1"></i> Agentic AI
+            </span>
+            
+            <h1 class="mt-2">{{ project.name }}</h1>
+            <p class="lead" style="color: var(--text-secondary); max-width: 700px; margin: 0 auto;">
+                {{ project.description }}
+            </p>
+            
+            <div class="project-tags mt-3" style="justify-content: center; display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                {% for tag in project.tags %}
+                <span class="project-tag">{{ tag }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="row mt-5">
+            <div class="col-lg-10 mx-auto">
+                <!-- Task Input -->
+                <div class="prediction-form-card fade-in" style="border-color: #06b6d4;">
+                    <h3 class="form-title">
+                        <i class="fas fa-terminal" style="color: #06b6d4;"></i>
+                        Define Your Task
+                    </h3>
+                    <p style="color: var(--text-secondary);">
+                        Describe what you want the AI agent to accomplish. The agent will break down the task and execute it step by step.
+                    </p>
+                    
+                    <form id="prediction-form" data-project-id="{{ project.id }}">
+                        <div class="form-group">
+                            <label class="form-label" for="task">Task Description</label>
+                            <textarea class="form-control nlp-text-area" 
+                                      id="task" 
+                                      name="task"
+                                      placeholder="e.g., Research the latest trends in renewable energy and summarize the key findings..."
+                                      rows="4"
+                                      required></textarea>
+                        </div>
+                        
+                        {% if project.inputs %}
+                        <div class="form-grid mt-4">
+                            {% for input in project.inputs %}
+                            {% if input.name != 'task' %}
+                            <div class="form-group">
+                                <label class="form-label" for="{{ input.name }}">{{ input.label or input.name }}</label>
+                                {% if input.type == 'select' %}
+                                <select class="form-control form-select" id="{{ input.name }}" name="{{ input.name }}">
+                                    {% for option in input.options %}
+                                    <option value="{{ option.value if option.value is defined else option }}"
+                                            {% if input.default == (option.value if option.value is defined else option) %}selected{% endif %}>
+                                        {{ option.label if option.label is defined else option }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                {% elif input.type == 'number' %}
+                                <input type="number" class="form-control" id="{{ input.name }}" name="{{ input.name }}"
+                                       {% if input.default is defined %}value="{{ input.default }}"{% endif %}
+                                       {% if input.min is defined %}min="{{ input.min }}"{% endif %}
+                                       {% if input.max is defined %}max="{{ input.max }}"{% endif %}>
+                                {% elif input.type == 'checkbox' %}
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="{{ input.name }}" name="{{ input.name }}"
+                                           {% if input.default %}checked{% endif %}>
+                                    <label class="form-check-label" for="{{ input.name }}">{{ input.checkbox_label or 'Enable' }}</label>
+                                </div>
+                                {% else %}
+                                <input type="text" class="form-control" id="{{ input.name }}" name="{{ input.name }}"
+                                       placeholder="{{ input.placeholder or '' }}"
+                                       {% if input.default is defined %}value="{{ input.default }}"{% endif %}>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        <div class="text-center mt-4">
+                            <button type="submit" class="predict-btn" style="background: linear-gradient(135deg, #06b6d4, #0891b2);">
+                                <span class="btn-text">
+                                    <i class="fas fa-play me-2"></i>Run Agent
+                                </span>
+                                <span class="spinner"></span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Error Display -->
+                <div id="error-display" class="error-message" style="display: none;"></div>
+                
+                <!-- Agent Steps Display -->
+                <div id="results-section" class="results-section">
+                    <div class="agent-steps-container" style="border-color: #06b6d4;">
+                        <h4 class="form-title">
+                            <i class="fas fa-tasks" style="color: #06b6d4;"></i>
+                            Agent Execution
+                        </h4>
+                        
+                        <div id="agent-steps">
+                            <!-- Steps will be populated dynamically -->
+                        </div>
+                        
+                        <!-- Final Result -->
+                        <div id="final-result" style="display: none; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
+                            <h5 style="color: var(--accent-primary); margin-bottom: 1rem;">
+                                <i class="fas fa-check-circle me-2"></i>Final Result
+                            </h5>
+                            <div id="result-value" class="agent-step-result" style="font-size: 1rem; white-space: pre-wrap;"></div>
+                        </div>
+                        
+                        <div id="result-details" class="result-details" style="margin-top: 1.5rem;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+window.projectOutput = {{ project.output | tojson | safe if project.output else '{}' }};
+
+// Agentic-specific result display
+const originalDisplayResults = window.displayResults;
+window.displayResults = function(result) {
+    const agentSteps = document.getElementById('agent-steps');
+    const finalResult = document.getElementById('final-result');
+    const resultValue = document.getElementById('result-value');
+    
+    // Display steps if available
+    if (result.steps && Array.isArray(result.steps)) {
+        agentSteps.innerHTML = '';
+        
+        result.steps.forEach((step, index) => {
+            const stepDiv = document.createElement('div');
+            stepDiv.className = `agent-step ${step.status || 'completed'}`;
+            stepDiv.innerHTML = `
+                <div class="agent-step-number">${index + 1}</div>
+                <div class="agent-step-content">
+                    <div class="agent-step-title">${step.title || 'Step ' + (index + 1)}</div>
+                    <div class="agent-step-description">${step.description || ''}</div>
+                    ${step.result ? `<div class="agent-step-result">${step.result}</div>` : ''}
+                </div>
+            `;
+            agentSteps.appendChild(stepDiv);
+        });
+    }
+    
+    // Display final result
+    if (result.result) {
+        finalResult.style.display = 'block';
+        resultValue.textContent = typeof result.result === 'object' ? 
+            JSON.stringify(result.result, null, 2) : result.result;
+    }
+    
+    // Call original for other displays
+    if (originalDisplayResults && originalDisplayResults !== window.displayResults) {
+        originalDisplayResults(result);
+    }
+};
+</script>
+{% endblock %}

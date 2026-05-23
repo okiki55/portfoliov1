@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.name }} - {{ profile.name or 'ML/AI Engineer' }}{% endblock %}
+
+{% block content %}
+<section class="project-detail-page section" style="padding-bottom: 2rem;">
+    <div class="container">
+        <!-- Back Button -->
+        <div class="mb-4 fade-in">
+            <a href="{{ url_for('projects_list') }}" class="btn btn-outline-custom btn-sm">
+                <i class="fas fa-arrow-left me-2"></i>Back to Projects
+            </a>
+        </div>
+        
+        <!-- Project Header with Chat Theme -->
+        <div class="project-header fade-in" style="margin-bottom: 2rem;">
+            <span class="project-type-badge type-badge-chat" style="display: inline-block; margin-bottom: 1rem;">
+                <i class="fas fa-comments me-1"></i> Chat System
+            </span>
+            
+            <h1 class="mt-2">{{ project.name }}</h1>
+            <p class="lead" style="color: var(--text-secondary); max-width: 600px; margin: 0 auto;">
+                {{ project.description }}
+            </p>
+        </div>
+        
+        <!-- Full Chat Interface -->
+        <div class="row">
+            <div class="col-lg-10 mx-auto">
+                <div id="chat-interface" class="chat-interface-container fade-in" style="border-color: #ec4899;">
+                    <!-- Chat Header -->
+                    <div class="chat-interface-header">
+                        <div class="chat-interface-avatar" style="background: linear-gradient(135deg, #ec4899, #be185d);">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div class="chat-interface-info">
+                            <h3>{{ project.name }}</h3>
+                            <p><i class="fas fa-circle" style="color: #22c55e; font-size: 0.5rem;"></i> Online - Ready to chat</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Messages Area -->
+                    <div id="chat-messages-main" class="chat-messages-main">
+                        <!-- Welcome message -->
+                        <div class="chat-message chat-message-bot">
+                            <div class="chat-message-content">
+                                {{ project.welcome_message or "Hello! I'm here to help. What would you like to talk about?" }}
+                            </div>
+                        </div>
+                        
+                        {% if project.suggested_prompts %}
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">
+                            {% for prompt in project.suggested_prompts %}
+                            <button type="button" class="suggested-prompt" onclick="useSuggestedPrompt('{{ prompt }}')"
+                                    style="padding: 0.5rem 1rem; background: var(--bg-tertiary); border: 1px solid var(--border-color); 
+                                           border-radius: 20px; color: var(--text-secondary); cursor: pointer; font-size: 0.85rem;
+                                           transition: all 0.2s;">
+                                {{ prompt }}
+                            </button>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Input Area -->
+                    <div class="chat-input-main-area">
+                        <form id="chat-form" class="chat-input-main-form" data-project-id="{{ project.id }}">
+                            <input type="text" 
+                                   id="chat-input-main" 
+                                   class="chat-input-main" 
+                                   placeholder="Type your message..."
+                                   autocomplete="off"
+                                   required>
+                            <button type="submit" class="predict-btn" style="background: linear-gradient(135deg, #ec4899, #be185d); padding: 0.75rem 2rem;">
+                                <span class="btn-text">
+                                    <i class="fas fa-paper-plane"></i>
+                                </span>
+                                <span class="spinner"></span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Features Info -->
+                <div class="mt-4 fade-in" style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                    <div style="padding: 0.75rem 1.25rem; background: var(--bg-card); border-radius: 25px; 
+                                border: 1px solid var(--border-color); display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-bolt" style="color: #ec4899;"></i>
+                        <span style="color: var(--text-secondary); font-size: 0.9rem;">Real-time responses</span>
+                    </div>
+                    <div style="padding: 0.75rem 1.25rem; background: var(--bg-card); border-radius: 25px; 
+                                border: 1px solid var(--border-color); display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-brain" style="color: #ec4899;"></i>
+                        <span style="color: var(--text-secondary); font-size: 0.9rem;">AI-powered</span>
+                    </div>
+                    <div style="padding: 0.75rem 1.25rem; background: var(--bg-card); border-radius: 25px; 
+                                border: 1px solid var(--border-color); display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-history" style="color: #ec4899;"></i>
+                        <span style="color: var(--text-secondary); font-size: 0.9rem;">Context-aware</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+window.projectOutput = {{ project.output | tojson | safe if project.output else '{}' }};
+
+function useSuggestedPrompt(prompt) {
+    const input = document.getElementById('chat-input-main');
+    if (input) {
+        input.value = prompt;
+        input.focus();
+    }
+}
+
+// Style suggested prompts on hover
+document.querySelectorAll('.suggested-prompt').forEach(btn => {
+    btn.addEventListener('mouseenter', () => {
+        btn.style.borderColor = '#ec4899';
+        btn.style.color = '#ec4899';
+    });
+    btn.addEventListener('mouseleave', () => {
+        btn.style.borderColor = 'var(--border-color)';
+        btn.style.color = 'var(--text-secondary)';
+    });
+});
+</script>
+{% endblock %}
