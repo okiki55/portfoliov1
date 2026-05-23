@@ -1,48 +1,35 @@
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 from anthropic import Anthropic
 from dotenv import load_dotenv
+from cachetools import TTLCache
 import os
 
 load_dotenv()
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-pdf_path = os.path.join(BASE_DIR, "RAG_DOC.pdf")
-loader = PyPDFLoader(pdf_path)
+cache = TTLCache(maxsize=100, ttl=300)
 
-documents = loader.load()
-
-from cachetools import TTLCache
-
-cache = TTLCache(maxsize=100, ttl=300) 
-splitter = RecursiveCharacterTextSplitter(
-    chunk_size=500,
-    chunk_overlap=100,
-    separators=["\n\n", "\n", ".", " "]
+embeddings = HuggingFaceEmbeddings(
+    model_name="all-MiniLM-L6-v2"
 )
 
-chunks = splitter.split_documents(documents)
-
-
-embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-
-vectorstore = Chroma.from_documents(
-    chunks,
-    embedding=embeddings,
-    persist_directory="db"
+# ✅ LOAD existing DB only
+vectorstore = Chroma(
+    persist_directory="db",
+    embedding_function=embeddings
 )
+
 retriever = vectorstore.as_retriever(
     search_type="similarity",
     search_kwargs={"k": 4}
-)   
+)
 
+client = Anthropic(
+    api_key=os.getenv("ANTHROPIC_API_KEY")
+)
 
-client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 CHAT_HISTORY = []
-MAX_HISTORY = 6  # keeps last 3 exchanges (user + assistant)
-
+MAX_HISTORY = 6
 
 def predict(data):
     message = data.get("message", "").strip()
